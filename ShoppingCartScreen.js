@@ -2,19 +2,14 @@ import React from 'react';
 import { View, Text, StyleSheet, FlatList, Button } from 'react-native';
 
 const ShoppingCartScreen = ({ route, navigation }) => {
-  // Extract cartItems from route.params or use an empty array as default
   const cartItems = route.params?.cartItems || [];
 
-  // Function to handle removing an item from the cart
   const handleRemoveItem = (itemId) => {
-    // Filter out the item with the given itemId from cartItems
-    const updatedCartItems = cartItems.filter((item) => item.id !== itemId);
-    // Update the cartItems in route.params to reflect the updated cart state
+    const updatedCartItems = cartItems.filter(item => item.id !== itemId);
     navigation.setParams({ cartItems: updatedCartItems });
   };
 
-  // Calculate total price of all items in the cart
-  const totalPrice = cartItems.reduce((total, item) => total + item.price, 0);
+  const totalPrice = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
 
   return (
     <View style={styles.container}>
@@ -45,8 +40,6 @@ const ShoppingCartScreen = ({ route, navigation }) => {
           <Button
             title="Proceed to Checkout"
             onPress={() => {
-              // Implement your checkout logic here (navigate to payment screen, etc.)
-              // For demonstration, show an alert message
               alert('Proceed to checkout!');
             }}
           />

@@ -32,11 +32,6 @@ const MainStack = () => (
     />
   </Stack.Navigator>
 );
-const ShoppingCartStack = () => (
-  <Stack.Navigator>
-    <Stack.Screen name="ShoppingCart" component={ShoppingCartScreen} />
-  </Stack.Navigator>
-);
 
 const App = () => {
   const [showSplash, setShowSplash] = useState(true);
@@ -44,7 +39,7 @@ const App = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false); // Hide the splash screen after 1 second
-    }, 5000);
+    }, 1000);
 
     return () => clearTimeout(timer); // Cleanup the timer on unmounting
   }, []);

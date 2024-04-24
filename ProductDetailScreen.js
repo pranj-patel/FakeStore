@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Button, ActivityIndicator, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Button, ActivityIndicator, Image, TouchableOpacity, ScrollView } from 'react-native';
 
 const ProductDetailScreen = ({ route, navigation }) => {
   const { productId } = route.params;
@@ -7,7 +7,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProduct = async (productId) => {
+    const fetchProduct = async () => {
       try {
         const response = await fetch(`https://fakestoreapi.com/products/${productId}`);
         const data = await response.json();
@@ -26,7 +26,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
       }
     };
 
-    fetchProduct(productId);
+    fetchProduct();
   }, [productId]);
 
   const handleBackPress = () => {
@@ -37,24 +37,36 @@ const ProductDetailScreen = ({ route, navigation }) => {
     if (product) {
       // Retrieve the existing cartItems from route.params or initialize as an empty array
       const cartItems = route.params?.cartItems || [];
-      
+  
       // Check if the product is already in the cart based on its id
       const isProductInCart = cartItems.some(item => item.id === product.id);
-
+  
       if (!isProductInCart) {
-        // Add the product to the cartItems array
-        const updatedCartItems = [...cartItems, { ...product, quantity: 1 }];
+        // If the product is not already in the cart, add it to cartItems with quantity 1
+        const updatedCartItems = [
+          ...cartItems,
+          { ...product, quantity: 1 }
+        ];
+  
         // Navigate to ShoppingCartScreen and pass updated cartItems
-        navigation.navigate('ShoppingCartScreen', { cartItems: updatedCartItems });
+        navigation.navigate('Shopping Cart', { cartItems: updatedCartItems });
       } else {
-        // Alert user that the product is already in the cart
-        alert('This product is already in your cart.');
+        // If the product is already in the cart, update its quantity (optional)
+        const updatedCartItems = cartItems.map(item => {
+          if (item.id === product.id) {
+            return { ...item, quantity: item.quantity + 1 };
+          }
+          return item;
+        });
+  
+        // Navigate to ShoppingCartScreen and pass updated cartItems
+        navigation.navigate('Shopping Cart', { cartItems: updatedCartItems });
       }
     }
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       {loading ? (
         <ActivityIndicator size="large" color="#0000ff" />
       ) : product ? (
@@ -63,8 +75,13 @@ const ProductDetailScreen = ({ route, navigation }) => {
           {product.image && (
             <Image source={{ uri: product.image }} style={styles.productImage} />
           )}
-          <Text style={styles.price}>${product.price.toFixed(2)}</Text>
-          <Text style={styles.description}>{product.description}</Text>
+          <Text style={styles.price}>Price: ${product.price.toFixed(2)}</Text>
+          <Text style={styles.rating}>Rating: {product.rating.rate} ({product.rating.count} reviews)</Text>
+          <Text style={styles.sold}>Sold: {product.rating.count}</Text>
+          <View style={styles.descriptionContainer}>
+            <Text style={styles.descriptionTitle}>Description</Text>
+            <Text style={styles.descriptionText}>{product.description}</Text>
+          </View>
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={[styles.button, styles.backButton]}
@@ -83,7 +100,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
       ) : (
         <Text style={styles.errorText}>Product not found</Text>
       )}
-    </View>
+    </ScrollView>
   );
 };
 
@@ -98,7 +115,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 10,
     textAlign: 'center',
-    backgroundColor: '#007BFF',
+    backgroundColor: '#3498db',
     color: '#FFFFFF',
     padding: 10,
     borderRadius: 5,
@@ -109,9 +126,35 @@ const styles = StyleSheet.create({
     color: '#007BFF',
     textAlign: 'center',
   },
-  description: {
+  rating: {
+    fontSize: 16,
+    marginBottom: 10,
+    color: '#001d3d',
+    textAlign: 'center',
+  },
+  sold: {
     fontSize: 16,
     marginBottom: 20,
+    color: '#001d3d',
+    textAlign: 'center',
+  },
+  descriptionContainer: {
+    marginBottom: 20,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#DDDDDD',
+    borderRadius: 5,
+  },
+  descriptionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  descriptionScrollView: {
+    maxHeight: 150, // Set max height to enable scrolling
+  },
+  descriptionText: {
+    fontSize: 16,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -130,10 +173,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   backButton: {
-    backgroundColor: '#007BFF',
+    backgroundColor: '#3498db',
   },
   addToCartButton: {
-    backgroundColor: '#007BFF',
+    backgroundColor: '#3498db',
   },
   productImage: {
     width: '100%',
