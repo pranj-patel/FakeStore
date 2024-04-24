@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   },
   sold: {
     fontSize: 16,
-    marginBottom: 20,
+    marginBottom: 30,
     color: '#001d3d',
     textAlign: 'center',
   },
