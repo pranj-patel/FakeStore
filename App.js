@@ -39,7 +39,7 @@ const App = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false); // Hide the splash screen after 1 second
-    }, 1000);
+    }, 5000);
 
     return () => clearTimeout(timer); // Cleanup the timer on unmounting
   }, []);
@@ -76,7 +76,7 @@ const App = () => {
           },
         })}
         tabBarOptions={{
-          activeTintColor: 'blue',
+          activeTintColor: '#3498db',
           inactiveTintColor: 'gray',
         }}
       >
