@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableHighlight, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableHighlight, Image, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 const ProductListScreen = ({ route }) => {
@@ -22,10 +22,26 @@ const ProductListScreen = ({ route }) => {
     };
 
     fetchProducts();
-  }, [category]);
+
+    // Customize navigation options to hide default header
+    navigation.setOptions({
+      headerShown: false,
+    });
+
+    // Clean up to restore default header on component unmount (if necessary)
+    return () => {
+      navigation.setOptions({
+        headerShown: true,
+      });
+    };
+  }, [category, navigation]);
 
   const handleProductPress = (productId) => {
     navigation.navigate('ProductDetailScreen', { productId });
+  };
+
+  const handleBackPress = () => {
+    navigation.goBack();
   };
 
   const renderProductItem = ({ item }) => (
@@ -59,6 +75,9 @@ const ProductListScreen = ({ route }) => {
           contentContainerStyle={styles.productList}
         />
       )}
+      <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+        <Text style={styles.backButtonText}>Back</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -113,6 +132,18 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 14,
     color: '#888888',
+  },
+  backButton: {
+    backgroundColor: '#3498db',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
 });
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Button, ActivityIndicator, Image, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, ActivityIndicator, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProductDetailScreen = ({ route, navigation }) => {
   const { productId } = route.params;
@@ -12,7 +13,6 @@ const ProductDetailScreen = ({ route, navigation }) => {
         const response = await fetch(`https://fakestoreapi.com/products/${productId}`);
         const data = await response.json();
 
-        // Ensure the 'image' field is available in the product object
         const productWithImage = {
           ...data,
           image: data.image ? data.image : 'https://via.placeholder.com/200',
@@ -27,46 +27,62 @@ const ProductDetailScreen = ({ route, navigation }) => {
     };
 
     fetchProduct();
-  }, [productId]);
+
+    navigation.setOptions({
+      headerShown: false,
+    });
+
+    return () => {
+      navigation.setOptions({
+        headerShown: true,
+      });
+    };
+  }, [productId, navigation]);
 
   const handleBackPress = () => {
     navigation.goBack();
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (product) {
-      // Retrieve the existing cartItems from route.params or initialize as an empty array
-      const cartItems = route.params?.cartItems || [];
-  
-      // Check if the product is already in the cart based on its id
-      const isProductInCart = cartItems.some(item => item.id === product.id);
-  
-      if (!isProductInCart) {
-        // If the product is not already in the cart, add it to cartItems with quantity 1
-        const updatedCartItems = [
-          ...cartItems,
-          { ...product, quantity: 1 }
-        ];
-  
-        // Navigate to ShoppingCartScreen and pass updated cartItems
-        navigation.navigate('Shopping Cart', { cartItems: updatedCartItems });
-      } else {
-        // If the product is already in the cart, update its quantity (optional)
-        const updatedCartItems = cartItems.map(item => {
-          if (item.id === product.id) {
-            return { ...item, quantity: item.quantity + 1 };
-          }
-          return item;
-        });
-  
-        // Navigate to ShoppingCartScreen and pass updated cartItems
-        navigation.navigate('Shopping Cart', { cartItems: updatedCartItems });
+      try {
+        const storedCartItems = await AsyncStorage.getItem('cartItems');
+        const cartItems = storedCartItems ? JSON.parse(storedCartItems) : [];
+
+        const existingItem = cartItems.find(item => item.id === product.id);
+
+        if (!existingItem) {
+          const updatedCartItems = [
+            ...cartItems,
+            { ...product, quantity: 1 }
+          ];
+
+          await AsyncStorage.setItem('cartItems', JSON.stringify(updatedCartItems));
+          navigation.navigate('Shopping Cart');
+        } else {
+          const updatedCartItems = cartItems.map(item => {
+            if (item.id === product.id) {
+              return { ...item, quantity: item.quantity + 1 };
+            }
+            return item;
+          });
+
+          await AsyncStorage.setItem('cartItems', JSON.stringify(updatedCartItems));
+          navigation.navigate('Shopping Cart');
+        }
+      } catch (error) {
+        console.error('Error adding item to cart:', error);
       }
     }
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      showsVerticalScrollIndicator={false} // Disable vertical scroll indicator
+      scrollEnabled={!loading} // Disable scrolling while loading
+      keyboardShouldPersistTaps="handled" // Allow tapping on components without dismissing keyboard
+    >
       {loading ? (
         <ActivityIndicator size="large" color="#0000ff" />
       ) : product ? (
@@ -80,7 +96,9 @@ const ProductDetailScreen = ({ route, navigation }) => {
           <Text style={styles.sold}>Sold: {product.rating.count}</Text>
           <View style={styles.descriptionContainer}>
             <Text style={styles.descriptionTitle}>Description</Text>
-            <Text style={styles.descriptionText}>{product.description}</Text>
+            <ScrollView style={styles.descriptionScrollView}>
+              <Text style={styles.descriptionText}>{product.description}</Text>
+            </ScrollView>
           </View>
           <View style={styles.buttonContainer}>
             <TouchableOpacity
@@ -106,9 +124,10 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: '#FFFFFF',
     padding: 20,
+    minHeight: Platform.OS === 'ios' ? '100%' : undefined, // Ensure full height on iOS
   },
   title: {
     fontSize: 24,
@@ -151,7 +170,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   descriptionScrollView: {
-    maxHeight: 150, // Set max height to enable scrolling
+    maxHeight: 150,
   },
   descriptionText: {
     fontSize: 16,

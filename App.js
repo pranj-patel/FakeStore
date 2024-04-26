@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/Ionicons';
 import SplashScreen from './SplashScreen';
-import CategoryScreen from './CategoryScreen';
-import ProductListScreen from './ProductListScreen';
-import ProductDetailScreen from './ProductDetailScreen';
-import ShoppingCartScreen from './ShoppingCartScreen';
+import CategoryScreen from './src/screens/CategoryScreen';
+import ProductListScreen from './src/screens/ProductListScreen';
+import ProductDetailScreen from './src/screens/ProductDetailScreen';
+import ShoppingCartScreen from './src/screens/ShoppingCartScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -39,7 +39,7 @@ const App = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false); // Hide the splash screen after 1 second
-    }, 5000);
+    }, 1000);
 
     return () => clearTimeout(timer); // Cleanup the timer on unmounting
   }, []);
