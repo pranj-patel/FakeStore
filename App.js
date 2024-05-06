@@ -9,6 +9,7 @@ import CategoryScreen from './src/screens/CategoryScreen';
 import ProductListScreen from './src/screens/ProductListScreen';
 import ProductDetailScreen from './src/screens/ProductDetailScreen';
 import ShoppingCartScreen from './src/screens/ShoppingCartScreen';
+import { useSelector } from 'react-redux';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -35,6 +36,7 @@ const MainStack = () => (
 
 const App = () => {
   const [showSplash, setShowSplash] = useState(true);
+  const cartItemsCount = useSelector(state => state.cart.items.reduce((count, item) => count + item.quantity, 0));
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -61,7 +63,26 @@ const App = () => {
               iconName = focused ? 'cart' : 'cart-outline';
             }
 
-            return <Icon name={iconName} size={size} color={color} />;
+            return (
+              <View style={{ position: 'relative' }}>
+                <Icon name={iconName} size={size} color={color} />
+                {route.name === 'Shopping Cart' && cartItemsCount > 0 && (
+                  <View style={{
+                    position: 'absolute',
+                    backgroundColor: 'red',
+                    borderRadius: 10,
+                    width: 20,
+                    height: 20,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    top: -5,
+                    right: -10,
+                  }}>
+                    <Text style={{ color: 'white', fontSize: 12 }}>{cartItemsCount}</Text>
+                  </View>
+                )}
+              </View>
+            );
           },
           tabBarLabel: ({ focused, color }) => {
             let label;
