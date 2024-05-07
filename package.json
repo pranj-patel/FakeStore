@@ -27,7 +27,8 @@
     "react-native-screens": "~3.29.0",
     "react-native-snap-carousel": "^3.9.1",
     "react-native-web": "~0.19.6",
-    "react-redux": "^9.1.2"
+    "react-redux": "^9.1.2",
+    "redux": "^5.0.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"

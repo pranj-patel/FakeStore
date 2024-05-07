@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, Button } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
-import { removeItemFromCart, updateCartItemQuantity} from 'C:\Users\pranj\OneDrive\Desktop\Mobile App\FakeStore\FakeStore\src\redux\cartSlice.js';
+import { removeItemFromCart, updateCartItemQuantity} from '../redux/cartSlice';
 
 const ShoppingCartScreen = () => {
   const cartItems = useSelector(state => state.cart.items);
