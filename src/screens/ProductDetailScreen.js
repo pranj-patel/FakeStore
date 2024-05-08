@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, ActivityIndicator, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useDispatch } from 'react-redux';
+import { addItemToCart } from '../redux/cartSlice'; // Importing addItemToCart action
+
 
 const ProductDetailScreen = ({ route, navigation }) => {
   const { productId } = route.params;
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch(); 
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -49,33 +53,29 @@ const ProductDetailScreen = ({ route, navigation }) => {
         const storedCartItems = await AsyncStorage.getItem('cartItems');
         const cartItems = storedCartItems ? JSON.parse(storedCartItems) : [];
 
-        const existingItem = cartItems.find(item => item.id === product.id);
+        const existingItemIndex = cartItems.findIndex(item => item.id === product.id);
 
-        if (!existingItem) {
-          const updatedCartItems = [
-            ...cartItems,
-            { ...product, quantity: 1 }
-          ];
-
+        if (existingItemIndex === -1) {
+          // If the product is not in the cart, add it with quantity 1
+          const updatedCartItems = [...cartItems, { ...product, quantity: 1 }];
           await AsyncStorage.setItem('cartItems', JSON.stringify(updatedCartItems));
-          navigation.navigate('Shopping Cart');
         } else {
-          const updatedCartItems = cartItems.map(item => {
-            if (item.id === product.id) {
-              return { ...item, quantity: item.quantity + 1 };
-            }
-            return item;
-          });
-
-          await AsyncStorage.setItem('cartItems', JSON.stringify(updatedCartItems));
-          navigation.navigate('Shopping Cart');
+          // If the product is already in the cart, update its quantity
+          cartItems[existingItemIndex].quantity++;
+          await AsyncStorage.setItem('cartItems', JSON.stringify(cartItems));
         }
+
+        // Dispatch action to add item to Redux store
+        dispatch(addItemToCart({ ...product, quantity: 1 }));
+
+        // Navigate to the shopping cart page
+        navigation.navigate('Shopping Cart');
       } catch (error) {
         console.error('Error adding item to cart:', error);
       }
     }
   };
-
+  
   return (
     <ScrollView
       contentContainerStyle={styles.container}
