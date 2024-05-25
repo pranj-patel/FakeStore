@@ -1,8 +1,10 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, Button, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, FlatList, Button, Image, Alert } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { removeItemFromCart, updateCartItemQuantity } from '../redux/cartSlice';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
+import axios from 'axios';
+
 
 const ShoppingCartScreen = () => {
   const cartItems = useSelector(state => state.cart.items);
@@ -29,9 +31,7 @@ const ShoppingCartScreen = () => {
       updateCartInStorage(updatedCartItems); // Update cart in AsyncStorage
     }
   };
-  
 
-  // Function to update cart in AsyncStorage
   const updateCartInStorage = async (updatedCartItems) => {
     try {
       await AsyncStorage.setItem('cartItems', JSON.stringify(updatedCartItems));
@@ -39,6 +39,41 @@ const ShoppingCartScreen = () => {
       console.error('Error updating cart in AsyncStorage:', error);
     }
   };
+
+  const updateCart = async () => {
+    const token = await AsyncStorage.getItem('token');
+    if (!token) {
+      Alert.alert('Error', 'Authentication token is missing.');
+      return;
+    }
+    
+    if (!cartItems || cartItems.length === 0) {
+      Alert.alert('Error', 'Cart is empty.');
+      return;
+    }
+  
+    try {
+      const response = await axios.post('http://localhost:3000/orders/neworder', {
+        items: cartItems
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      if (response.status === 200) {
+        Alert.alert('Success', 'Order is placed successfully.');
+        await AsyncStorage.removeItem('cartItems');
+      } else {
+        Alert.alert('Error', 'Failed to order');
+      }
+    } catch (error) {
+      console.error('Error updating order:', error);
+      Alert.alert('Error', 'Failed to order. Please try again later.');
+    }
+  };
+  
+  
 
   const renderCartItem = ({ item }) => (
     <View style={styles.itemContainer}>
@@ -57,7 +92,8 @@ const ShoppingCartScreen = () => {
   );
 
   const totalPrice = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
-  const totalItemsCount = cartItems.reduce((total, item) => total + item.quantity, 0); // Calculate total quantity of items
+  const totalItemsCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+
 
   return (
     <View style={styles.container}>
@@ -81,10 +117,8 @@ const ShoppingCartScreen = () => {
         <View style={styles.totalContainer}>
           <Text style={styles.totalText}>Total: ${totalPrice.toFixed(2)}</Text>
           <Button
-            title="Proceed to Checkout"
-            onPress={() => {
-              alert('Proceed to checkout!');
-            }}
+            title="Checkout"
+            onPress={updateCart}
           />
         </View>
       )}
