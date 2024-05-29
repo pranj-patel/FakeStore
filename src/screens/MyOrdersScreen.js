@@ -1,49 +1,62 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, Alert, StyleSheet, FlatList, StatusBar, ScrollView } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, Image, Alert, StyleSheet, FlatList, ScrollView } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Icon from 'react-native-vector-icons/FontAwesome'; // Import the icon library
+import Icon from 'react-native-vector-icons/FontAwesome';
+import { useDispatch, useSelector } from 'react-redux';
+import { useFocusEffect } from '@react-navigation/native';
+import { setNewOrdersCount } from '../redux/ordersSlice';
 
 const MyOrdersScreen = ({ navigation }) => {
     const [orders, setOrders] = useState([]);
-    const [newOrders, setNewOrders] = useState([]);
-    const [paidOrders, setPaidOrders] = useState([]);
-    const [deliveredOrders, setDeliveredOrders] = useState([]);
-    const [expandedOrderId, setExpandedOrderId] = useState(null);
-    const [expandedCategory, setExpandedCategory] = useState(null); // State to manage expanded category
     const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        loadOrders();
-    }, []);
+    const [expandedOrderId, setExpandedOrderId] = useState(null);
+    const [expandedCategory, setExpandedCategory] = useState(null);
+    const dispatch = useDispatch();
 
     const loadOrders = async () => {
         setLoading(true);
         try {
-            const response = await axios.get('http://localhost:3000/orders');
-            const data = await response.data;
+            const token = await AsyncStorage.getItem('token');
+            const response = await axios.get('http://localhost:3000/orders/all', {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            const data = response.data;
             const parsedOrders = data.orders.map(order => ({
                 ...order,
-                order_items: JSON.parse(order.order_items)
+                order_items: JSON.parse(order.order_items),
             }));
 
             setOrders(parsedOrders);
             categorizeOrders(parsedOrders);
         } catch (error) {
+            console.error('Error fetching orders:', error.response?.data || error.message);
             Alert.alert('Error', 'Failed to load orders. Please try again later.');
         } finally {
             setLoading(false);
         }
     };
 
+    useFocusEffect(
+        useCallback(() => {
+            loadOrders();
+        }, [])
+    );
+
+    useEffect(() => {
+        loadOrders();
+    }, []);
+
     const categorizeOrders = (orders) => {
         const newOrders = orders.filter(order => order.is_paid === 0 && order.is_delivered === 0);
         const paidOrders = orders.filter(order => order.is_paid === 1 && order.is_delivered === 0);
         const deliveredOrders = orders.filter(order => order.is_delivered === 1);
+        
+        dispatch(setNewOrdersCount(newOrders.length));
 
-        setNewOrders(newOrders);
-        setPaidOrders(paidOrders);
-        setDeliveredOrders(deliveredOrders);
+        return { newOrders, paidOrders, deliveredOrders };
     };
 
     const handlePayOrder = async (orderId) => {
@@ -65,7 +78,7 @@ const MyOrdersScreen = ({ navigation }) => {
                 throw new Error('Failed to pay order');
             }
         } catch (error) {
-            console.error('Error paying order:', error);
+            console.error('Error paying order:', error.response?.data || error.message);
             Alert.alert('Error', 'Failed to pay order. Please try again later.');
         }
     };
@@ -89,7 +102,7 @@ const MyOrdersScreen = ({ navigation }) => {
                 throw new Error('Failed to receive order');
             }
         } catch (error) {
-            console.error('Error receiving order:', error);
+            console.error('Error receiving order:', error.response?.data || error.message);
             Alert.alert('Error', 'Failed to receive order. Please try again later.');
         }
     };
@@ -102,7 +115,7 @@ const MyOrdersScreen = ({ navigation }) => {
             >
                 <Text style={styles.orderHeaderText}>Order ID: {item.id}</Text>
                 <Text style={styles.orderHeaderText}>Items: {item.order_items.length}</Text>
-                <Text style={styles.orderHeaderText}>Total Price: ${item.total_price}</Text>
+                <Text style={styles.orderHeaderText}>Total Price: ${(item.total_price / 100).toFixed(2)}</Text>
                 <TouchableOpacity
                     style={styles.caretButton}
                     onPress={() => toggleOrderExpanded(item.id)}
@@ -168,21 +181,21 @@ const MyOrdersScreen = ({ navigation }) => {
             </View>
             <OrderTab
                 title="New Orders"
-                orders={newOrders}
+                orders={orders.filter(order => order.is_paid === 0 && order.is_delivered === 0)}
                 expanded={expandedCategory === 'new'}
                 toggleExpanded={() => toggleCategoryExpanded('new')}
                 renderItem={renderOrderItem}
             />
             <OrderTab
                 title="Paid Orders"
-                orders={paidOrders}
+                orders={orders.filter(order => order.is_paid === 1 && order.is_delivered === 0)}
                 expanded={expandedCategory === 'paid'}
                 toggleExpanded={() => toggleCategoryExpanded('paid')}
                 renderItem={renderOrderItem}
             />
             <OrderTab
                 title="Delivered Orders"
-                orders={deliveredOrders}
+                orders={orders.filter(order => order.is_delivered === 1)}
                 expanded={expandedCategory === 'delivered'}
                 toggleExpanded={() => toggleCategoryExpanded('delivered')}
                 renderItem={renderOrderItem}

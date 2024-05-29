@@ -37,11 +37,16 @@ const cartSlice = createSlice({
         state.itemCount += itemDifference; // Update itemCount based on quantity change
         itemToUpdate.quantity = newQuantity;
       }
+    },
+    storeApiData(state, action) {
+      const items = action.payload;
+      state.items = items;
+      state.itemCount = items.reduce((total, item) => total + item.quantity, 0);
     }
         
   }  
 });
 
-export const { addItemToCart, removeItemFromCart, updateCartItemQuantity } = cartSlice.actions;
+export const { addItemToCart, removeItemFromCart, updateCartItemQuantity,storeApiData } = cartSlice.actions;
 
 export default cartSlice.reducer;

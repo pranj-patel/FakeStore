@@ -3,6 +3,9 @@ import { View, Text, TextInput, Alert, StyleSheet, TouchableOpacity } from 'reac
 import axios from 'axios';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setAuth, clearAuth } from '../redux/authSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { storeApiData } from '../redux/cartSlice'; // Ensure this import is correct
 
 const UserProfileScreen = () => {
   const [user, setUser] = useState(null);
@@ -12,8 +15,9 @@ const UserProfileScreen = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [newName, setNewName] = useState('');
   const [password, setPassword] = useState('');
-  const [token, setToken] = useState('');
   const navigation = useNavigation();
+  const dispatch = useDispatch(); 
+  const Auth = useSelector(state => state.auth);
 
   const fetchUser = async () => {
     const storedName = await AsyncStorage.getItem('name');
@@ -23,11 +27,8 @@ const UserProfileScreen = () => {
     if (storedName && storedEmail && storedToken) {
       setName(storedName);
       setEmail(storedEmail);
-      setToken(storedToken);
       setUser({ name: storedName, email: storedEmail });
-    } else {
-      // Redirect to sign-in or sign-up screen if not authenticated
-      navigation.navigate('User Profile'); // Navigate to your sign-in screen
+      dispatch(setAuth({ name: storedName, email: storedEmail, token: storedToken }));
     }
   };
 
@@ -41,11 +42,42 @@ const UserProfileScreen = () => {
       await AsyncStorage.setItem('token', response.data.token);
       await AsyncStorage.setItem('email', response.data.email);
       await AsyncStorage.setItem('name', response.data.name);
-      await AsyncStorage.setItem('id', response.data.id);
+      dispatch(setAuth(response.data));
       setUser(response.data);
-      navigation.navigate('CategoryScreen');
+      fetchImpData(response.data.token); // Fetch additional data after sign-in
+      navigation.navigate('Home'); // Navigate to your home screen after successful sign-in
     } catch (error) {
       Alert.alert('Error', 'Invalid email or password');
+    }
+  };
+
+  const fetchImpData = async (Token) => {
+    try {
+      const response = await axios.get(`http://localhost:3000/cart`, {
+        headers: {
+          Authorization: `Bearer ${Token}`,
+        },
+      });
+      const { items } = response.data;
+      dispatch(storeApiData(items));
+    } catch (error) {
+      console.error('Error fetching cart data:', error);
+    }
+    try {
+      const response = await axios.get(`http://localhost:3000/orders/all`, {
+        headers: {
+          Authorization: `Bearer ${Token}`,
+        },
+      });
+      const data = response.data;
+      const parsedOrders = data.orders.map(order => ({
+        ...order,
+        order_items: JSON.parse(order.order_items)
+      }));
+      const newOrders = parsedOrders.filter(order => order.is_paid === 0 && order.is_delivered === 0);
+      dispatch({ type: 'SET_ORDER_COUNT', payload: newOrders.length });
+    } catch (error) {
+      console.error('Error fetching order', error);
     }
   };
 
@@ -55,9 +87,9 @@ const UserProfileScreen = () => {
       await AsyncStorage.setItem('email', response.data.email);
       await AsyncStorage.setItem('name', response.data.name);
       await AsyncStorage.setItem('token', response.data.token);
-      await AsyncStorage.setItem('id', response.data.id);
+      dispatch(setAuth(response.data));
       setUser(response.data);
-      navigation.navigate('CategoryScreen');
+      navigation.navigate('Home'); // Navigate to your home screen after successful sign-up
     } catch (error) {
       Alert.alert('Error', 'Sign up failed');
     }
@@ -67,49 +99,58 @@ const UserProfileScreen = () => {
     await AsyncStorage.removeItem('token');
     await AsyncStorage.removeItem('email');
     await AsyncStorage.removeItem('name');
+    dispatch(clearAuth()); // Clear the auth state
     setUser(null);
+    Alert.alert('Success', 'Signed out successfully.');
+    navigation.navigate('User Profile');
   };
 
   const handleUpdateProfile = async () => {
+    console.log('Updating profile...'); // Check if function is called
     if (!newName || !password) {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
     try {
-      const response = await axios.post('http://localhost:3000/users/update', {
+      const response = await axios.post('http:/localhost:3000/users/update', {
         name: newName,
         password,
       }, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${Auth.token}`,
         },
       });
+      console.log('Response status:', response.status); // Log the response status
+      console.log('Response data:', response.data); // Log the response data
       if (response.status === 200) {
+        console.log('Profile updated successfully');
         await AsyncStorage.setItem('name', newName);
         setName(newName);
         setUser(prevUser => ({
           ...prevUser,
           name: newName,
         }));
+        dispatch(setAuth({ ...Auth, name: newName })); // Update the Redux store
         Alert.alert('Success', 'Profile updated successfully.');
         setIsUpdating(false);
       } else {
+        console.log('Failed to update profile', response);
         Alert.alert('Error', 'Failed to update profile');
       }
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error('Error updating profile:', error.response ? error.response.data : error.message);
       Alert.alert('Error', 'Failed to update profile. Please try again later.');
     }
   };
-
+  
   return (
     <View style={styles.container}>
       {user ? (
         <View style={styles.userInfoContainer}>
           {!isUpdating ? (
             <View>
-              <Text style={styles.userInfoText}>User Name: <Text style={styles.userInfoValue}>{user.name}</Text></Text>
-              <Text style={styles.userInfoText}>Email: <Text style={styles.userInfoValue}>{user.email}</Text></Text>
+              <Text style={styles.userInfoText}>User Name: <Text style={styles.userInfoValue}>{name}</Text></Text>
+              <Text style={styles.userInfoText}>Email: <Text style={styles.userInfoValue}>{email}</Text></Text>
               <View style={styles.buttonContainer}>
                 <TouchableOpacity style={styles.button} onPress={() => setIsUpdating(true)}>
                   <Text style={styles.buttonText}>Update</Text>
@@ -135,6 +176,7 @@ const UserProfileScreen = () => {
                 onChangeText={setPassword}
               />
               <View style={styles.buttonContainer}>
+                {/* <TouchableOpacity style={styles.confirmButton} onPress={handleUpdateProfile}> */}
                 <TouchableOpacity style={styles.confirmButton} onPress={handleUpdateProfile}>
                   <Text style={styles.buttonText}>Confirm</Text>
                 </TouchableOpacity>

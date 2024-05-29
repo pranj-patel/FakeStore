@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, ActivityIn
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
 import { addItemToCart } from '../redux/cartSlice'; // Importing addItemToCart action
-
+import axios from 'axios';
 
 const ProductDetailScreen = ({ route, navigation }) => {
   const { productId } = route.params;
@@ -14,7 +14,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const response = await fetch(`https://fakestoreapi.com/products/${productId}`);
+        const response = await fetch(`http://localhost:3000/products/${productId}`);
         const data = await response.json();
 
         const productWithImage = {
@@ -67,7 +67,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
         // Dispatch action to add item to Redux store
         dispatch(addItemToCart({ ...product, quantity: 1 }));
-
+  
         // Navigate to the shopping cart page
         navigation.navigate('Shopping Cart');
       } catch (error) {
@@ -75,7 +75,27 @@ const ProductDetailScreen = ({ route, navigation }) => {
       }
     }
   };
-  
+
+  const AddCartServer = async (product) => {
+    const token = await AsyncStorage.getItem('token');
+    try {
+      const response = await axios.put(`http://localhost:3000/cart`, {
+        items: product
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.status === 200) {
+        console.log('Success', 'Item added to Cart successfully.');
+      } else {
+        console.log('Error', 'Failed to Add');
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   return (
     <ScrollView
       contentContainerStyle={styles.container}
